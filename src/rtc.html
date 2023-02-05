@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RTC</title>
+    <link href="/plugins/bootstrap-5.2.2/css/bootstrap.min.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+    <div class="container-fluid">
+        <h4></h4>
+        <div class="row">
+            <div class="col-md-2">
+                <div class="list-user list-group"></div>
+            </div>
+            <div class="col-auto">
+                <div class="remote-audio"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/plugins/jquery/jquery-3.6.0.min.js"></script>
+    <script src="/plugins/bootstrap-5.2.2/js/bootstrap.bundle.min.js"></script>
+    <script src="/socket.io/socket.io.min.js"></script>
+    <script>
+
+        var io = new io();
+        var peerConnection = new RTCPeerConnection();
+
+        $('button').click(function () {
+            var txt = $('textarea').val();
+
+            sendChannel.send(txt);
+
+        })
+
+        io.on('connect', function (socket) {
+
+            io.on('list:user', function (u) {
+
+                var dv = [];
+
+                $.each(u.users, function (a, b) {
+
+                    addLogin(a);
+                })
+
+
+            })
+
+            $('h4').text('ID ' + io.id);
+        })
+
+        io.on('user:logout', function (id) {
+            console.log(id);
+            logout(id)
+        })
+
+        io.on('user:login', function (id) {
+            console.log('login', id)
+            addLogin(id)
+        })
+
+        io.on('call:in', function (data) {
+            console.log('panggilan', data);
+
+            peerRemote(data);
+        })
+
+        io.on("call:add:candidate", function (data) {
+            console.log('dapet candidate');
+            peerConnection.addIceCandidate(data.candidate);
+        })
+
+        io.on('call:terima', function (data) {
+            peerConnection.setRemoteDescription(data);
+        });
+
+        function addLogin(id) {
+            var e = $(`<div id-user="${id}" class="list-group-item list-group-item-action">
+                            ${id}
+                        </div>`);
+
+            if ($('.list-user').find(`[id-user="${id}"]`).length > 0) return;
+
+            e.click(function () {
+
+                var ini = $(this);
+                var ortu = ini.parents('.list-group');
+                var id = ini.attr('id-user');
+
+                ortu.find('.list-group-item').removeClass('active');
+
+                ini.addClass('active');
+
+                panggil(id);
+            })
+
+            $('.list-user').prepend(e[0]);
+
+        }
+
+        function panggil(id) {
+            var audio = $(`<audio controls autoplay></audio>`);
+
+            peerConnection.onicecandidate = function (e) {
+                io.emit('call:candidate:add', {
+                    to: id,
+                    cadidate: e.candidate
+                });
+            }
+
+            navigator.mediaDevices
+                .getUserMedia({
+                    audio: true,
+                    video: false
+                })
+                .then(function (stream) {
+                    console.log('Received local stream');
+                    var localStream = stream;
+
+                    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+                    peerConnection.createOffer().then(function (desc) {
+
+                        peerConnection.setLocalDescription(desc).then(function () {
+
+                            io.emit('call:request', {
+                                to: id,
+                                offer: desc
+                            })
+
+                        });
+                    })
+                })
+
+
+        }
+
+        function peerRemote(data) {
+            var audio = $(`<audio controls autoplay></audio>`);
+
+            $('.remote-audio').append(audio);
+
+            peerConnection.ontrack = function ({ streams: [stream] }) {
+                if (audio[0]) {
+                    audio[0].srcObject = stream;
+                }
+            };
+
+            peerConnection.onicecandidate = function (e) {
+                io.emit('call:candidate:add', {
+                    to: data.from,
+                    cadidate: e.candidate
+                });
+            }
+            console.log(data);
+            peerConnection.setRemoteDescription(data.offer).then(function () {
+
+                peerConnection.createAnswer().then(function (jwb) {
+
+                    peerConnection.setLocalDescription(jwb).then(function () {
+                        io.emit('call:accept', {
+                            to: data.from,
+                            answer: jwb
+                        })
+                    })
+
+                })
+
+            })
+
+        }
+
+        function logout(id) {
+            $('.list-user').find(`[id-user="${id}"]`).remove();
+        }
+
+    </script>
+</body>
+
+</html>
