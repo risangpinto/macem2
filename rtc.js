@@ -56,19 +56,19 @@ io.on('connect', (socket) => {
     socket.broadcast.emit('user:login', socket.id);
 
     socket.on('call:request', (data) => {
-
         socket.to(data.to).emit('call:in', {
             offer: data.offer,
             from: socket.id
         })
     })
 
-    socket.on('call:candidate:add', (data) => {
-        socket.to(data.to).emit("call:add:candidate", data);
+    socket.on('call:candidate:push', (data) => {
+        socket.to(data.to).emit("call:candidate:pull", data);
     })
 
     socket.on('call:accept', (data) => {
-        socket.to(data.to).emit("call:terima", data.answer);
+        data.from = socket.id;
+        socket.to(data.to).emit("call:terima", data);
     })
 })
 
