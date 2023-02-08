@@ -1,4 +1,4 @@
-const PORT = 8443;
+const PORT = 6443;
 const PATH = require('path');
 const FS = require('fs');
 
@@ -10,7 +10,7 @@ const https = require('https');
 //const server = http.createServer(app);
 
 const { Server } = require("socket.io");
-app.use(express.static(__dirname + "/src/"));
+app.use(express.static('src'));
 
 var server = https.createServer({
     key: FS.readFileSync(__dirname + "/certs/localhost.key"),
@@ -72,6 +72,32 @@ io.on('connect', (socket) => {
     })
 })
 
+const rtc = io.of('/rtc');
+var decr;
+
+rtc.on('connect', (socket) => {
+
+    socket.on('kirim', (d) => {
+        //console.log('kirim');
+
+        socket.broadcast.emit('terima', d)
+    })
+
+    socket.on('candidate:kirim', (c) => {
+        socket.broadcast.emit('candidate:call', c)
+    })
+
+    socket.on('candidate:terima', (c) => {
+        socket.broadcast.emit('candidate:answer', c)
+    })
+
+    socket.on('sudah', (d) => {
+        //console.log('sudah');
+
+        socket.broadcast.emit('udah', d);
+    })
+})
+
 app.get('/', async (req, res) => {
     var h = req.get('host').split(':');
     var fl = await FS.readFileSync(PATH.join(__dirname, 'src/rtc.html'));
@@ -82,6 +108,19 @@ app.get('/', async (req, res) => {
 
     return res.status(200).send(fl.toString().replace(new RegExp('{{web}}', 'g'), svr));
 });
+
+app.get('/call', async (req, res) => {
+
+    return res.status(200).sendFile(PATH.join(__dirname, 'src/pages/rtc/call.html'));
+});
+
+
+app.get('/jwb', async (req, res) => {
+
+    return res.status(200).sendFile(PATH.join(__dirname, 'src/pages/rtc/answer.html'));
+});
+
+//const east = require('./lib/easyrtc_server');
 
 server.listen(PORT, () => {
     console.log('Jalan', PORT);
