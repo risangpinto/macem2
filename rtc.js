@@ -83,6 +83,7 @@ app.get('/', async (req, res) => {
     return res.status(200).send(fl.toString().replace(new RegExp('{{web}}', 'g'), svr));
 });
 
+
 server.listen(PORT, () => {
     console.log('Jalan', PORT);
 })
