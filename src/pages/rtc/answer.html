@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Call</title>
+    <link href="/plugins/bootstrap-5.2.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body>
+    <video autoplay controls></video>
+    <audio autoplay controls></audio>
+    <script src="/plugins/jquery/jquery-3.6.0.min.js"></script>
+    <script src="/plugins/bootstrap-5.2.2/js/bootstrap.bundle.min.js"></script>
+    <script src="/socket.io/socket.io.min.js"></script>
+    <script>
+
+        var io = io('/rtc');
+        var peerConnection = new RTCPeerConnection({
+            "iceServers": [{
+                "urls": [
+                    "stun:stun1.l.google.com:19302",
+                    "stun:stun2.l.google.com:19302",
+                    "stun:stun.l.google.com:19302",
+                    "stun:stun3.l.google.com:19302",
+                    "stun:stun4.l.google.com:19302"
+                ]
+            }]
+        });
+        var audio = $('video');
+
+        peerConnection.ontrack = function ({ streams: [stream] }) {
+            if (audio[0]) {
+                console.log('track')
+                audio[0].srcObject = stream;
+
+            }
+        };
+
+        // peerConnection.onaddstream = function (e) {
+        //     audio[0].src = window.URL.createObjectURL(e.stream);
+        // };
+
+        peerConnection.onicecandidate = function (e) {
+            console.log('kirim kandi', e);
+            io.emit('candidate:terima', e.candidate);
+        }
+
+        io.on('connect', function (socket) {
+
+            io.on('terima', function (de) {
+
+                peerConnection.setRemoteDescription(new RTCSessionDescription(de)).then(function () {
+
+                    peerConnection.createAnswer().then(function (jwb) {
+                        peerConnection.setLocalDescription(jwb).then(function () {
+
+                            io.emit('sudah', jwb);
+
+                        });
+                    });
+                });
+
+                navigator.mediaDevices.getUserMedia({
+                    audio: true,
+                    video: false
+                }).then((stream) => {
+                    var localStream = stream;
+
+                    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+                    peerConnection.addStream(localStream);
+
+                })
+
+            })
+
+            io.on('candidate:call', function (c) {
+                console.log('kandi', c)
+                if (c) {
+                    peerConnection.addIceCandidate(new RTCIceCandidate(c));
+                }
+
+            })
+        });
+
+
+    </script>
+</body>
+
+</html>

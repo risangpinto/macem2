@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Call</title>
+    <link href="/plugins/bootstrap-5.2.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body>
+    <audio autoplay controls></audio>
+    <button>Call</button>
+    <script src="/plugins/jquery/jquery-3.6.0.min.js"></script>
+    <script src="/plugins/bootstrap-5.2.2/js/bootstrap.bundle.min.js"></script>
+    <script src="/socket.io/socket.io.min.js"></script>
+    <script>
+
+        var io = io('/rtc');
+        var peerConnection = new RTCPeerConnection({
+            "iceServers": [{
+                "urls": [
+                    "stun:stun1.l.google.com:19302",
+                    "stun:stun2.l.google.com:19302",
+                    "stun:stun.l.google.com:19302",
+                    "stun:stun3.l.google.com:19302",
+                    "stun:stun4.l.google.com:19302"
+                ]
+            }]
+        });
+
+        var audio = $('audio');
+
+        io.on('connect', function (socket) {
+
+            io.on('candidate:answer', function (c) {
+                console.log('kandi', c);
+                peerConnection.addIceCandidate(new RTCIceCandidate(c));
+            })
+
+            io.on('udah', function (d) {
+                console.log('udah', d);
+                peerConnection.setRemoteDescription(new RTCSessionDescription(d));
+            })
+        });
+
+        peerConnection.onicecandidate = function (e) {
+            io.emit('candidate:kirim', e.candidate);
+        }
+
+        peerConnection.ontrack = function ({ streams: [stream] }) {
+            if (audio[0]) {
+                console.log('track')
+                audio[0].srcObject = stream;
+
+            }
+        };
+
+        $('button').click(function () {
+
+            navigator.mediaDevices.getUserMedia({
+                audio: true,
+                video: true
+            }).then((stream) => {
+
+                var localStream = stream;
+
+                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+                peerConnection.addStream(localStream);
+
+                peerConnection.createOffer({
+                    offerToReceiveAudio: 1,
+                    offerToReceiveVideo: 0
+                }).then(function (desc) {
+
+                    peerConnection.setLocalDescription(desc).then(function () {
+
+                        io.emit('kirim', desc);
+
+                    });
+                });
+
+
+            }).catch(err => {
+                alert(err);
+            })
+        })
+
+
+    </script>
+</body>
+
+</html>
