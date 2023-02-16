@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paste Image</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css"
+        integrity="sha512-cyzxRvewl+FOKTtpBzYjW6x6IAYUCZy3sGP40hn+DQkqeluGRCax7qztK2ImL64SA+C7kVWdLI6wvdlStawhyw=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+
+<body>
+    <input type="text" />
+    <div>
+        <img />
+    </div>
+    <div>
+        <button>Ambil</button>
+    </div>
+    <script src="/plugins/jquery/jquery-3.6.0.min.js"></script>
+    <script src="/socket.io/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"
+        integrity="sha512-6lplKUSl86rUVprDIjiW8DuOniNX8UDoRATqZSds/7t6zCQZfaCe3e5zcGaQwxa8Kpn5RTM9Fvl3X2lLV4grPQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script>
+
+        var io = io();
+        var cropper;
+
+        $('input').on('paste', function (e) {
+            var elm = $(this);
+            var items = (e.clipboardData || e.originalEvent.clipboardData).items;
+
+            for (var i = 0; i < items.length; i++) {
+                console.log(items[i].type);
+                if (items[i].type.indexOf('image') !== -1) {
+                    var blob = items[i].getAsFile();
+
+                    if (cropper) {
+                        cropper.destroy();
+                        cropper = null;
+                    }
+
+
+
+                    if (URL) {
+                        var url = URL.createObjectURL(blob);
+
+                        console.log('URL', url);
+                        $('img').attr('src', url);
+
+                    } else {
+                        var reader = new FileReader();
+
+                        reader.readAsDataURL(blob);
+
+                        reader.onloadend = function () {
+                            var base64data = reader.result;
+
+                            console.log(base64data);
+                            $('img').attr('src', base64data);
+                        }
+                    }
+
+                    cropper = new Cropper($('img')[0], {
+                        aspectRatio: 1,
+                        //viewMode: 3,
+                    });
+                }
+            }
+        }).bind('input', function (e) {
+            var ortu = $(this).parent();
+
+            ortu.children('input[name="formula"]').val($(this).html())
+        })
+
+
+        $('button').click(function () {
+            if (cropper) {
+
+                canvas = cropper.getCroppedCanvas({
+                    width: 160,
+                    height: 160,
+                });
+
+                canvas.toBlob(function (blob) {
+                    io.emit('terima:file', blob, function () {
+
+                    });
+                })
+
+
+            }
+        });
+
+        io.on('connect', function () {
+
+            io.emit('minta:file', function (a) {
+                console.log(a);
+
+                const blob = new Blob([a]);
+                const reader = new FileReader();
+
+                reader.readAsDataURL(blob);
+
+                reader.onloadend = function () {
+                    var base64data = reader.result;
+
+                    console.log(base64data);
+                    $('img').attr('src', base64data);
+                }
+            })
+        })
+    </script>
+</body>
+
+</html>
