@@ -1,7 +1,11 @@
 const PORT = 6443;
 const PATH = require('path');
 const FS = require('fs');
+const mysql = require('mysql2');
 
+const conn = mysql.createConnection(
+    { host: 'localhost', user: 'root', password: 'v0ks3l199', database: 'coba' }
+);
 
 const express = require('express');
 const app = express();
@@ -18,7 +22,6 @@ var server = https.createServer({
 }, app);
 
 const io = new Server(server);
-
 
 class User {
     onlineUser = {};
@@ -69,6 +72,40 @@ io.on('connect', (socket) => {
     socket.on('call:accept', (data) => {
         data.from = socket.id;
         socket.to(data.to).emit("call:terima", data);
+    });
+
+    socket.on('terima:file', async (fl, cb) => {
+        console.log(Buffer.byteLength(fl));
+        try {
+            var w = await FS.writeFileSync(PATH.join(__dirname, 'uploads', 'tes.png'), fl);
+
+            conn.execute('INSERT INTO emp(`file`) VALUES(?)', [fl]);
+            console.log('upload', w);
+
+            cb();
+
+        } catch (error) {
+            console.log('upload error', error.message)
+        }
+
+
+    });
+
+    socket.on('minta:file', async (cb) => {
+
+        try {
+
+            conn.query('SELECT `file` FROM emp WHERE `file` IS NOT NULL LIMIT 1', function (err, res) {
+                console.log(res);
+                var fl = res[0].file;
+
+                cb(fl);
+            })
+
+        } catch (error) {
+            console.log('upload error', error.message)
+        }
+
     })
 })
 
