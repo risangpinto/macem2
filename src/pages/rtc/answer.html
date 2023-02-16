@@ -18,17 +18,7 @@
     <script>
 
         var io = io('/rtc');
-        var peerConnection = new RTCPeerConnection({
-            "iceServers": [{
-                "urls": [
-                    "stun:stun1.l.google.com:19302",
-                    "stun:stun2.l.google.com:19302",
-                    "stun:stun.l.google.com:19302",
-                    "stun:stun3.l.google.com:19302",
-                    "stun:stun4.l.google.com:19302"
-                ]
-            }]
-        });
+        var peerConnection = new RTCPeerConnection();
         var audio = $('video');
 
         peerConnection.ontrack = function ({ streams: [stream] }) {
@@ -49,6 +39,16 @@
         }
 
         io.on('connect', function (socket) {
+            navigator.mediaDevices.getUserMedia({
+                audio: true,
+                video: true
+            }).then((stream) => {
+                var localStream = stream;
+
+                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+                peerConnection.addStream(localStream);
+
+            })
 
             io.on('terima', function (de) {
 
@@ -63,16 +63,7 @@
                     });
                 });
 
-                navigator.mediaDevices.getUserMedia({
-                    audio: true,
-                    video: false
-                }).then((stream) => {
-                    var localStream = stream;
 
-                    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-                    peerConnection.addStream(localStream);
-
-                })
 
             })
 

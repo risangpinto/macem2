@@ -10,27 +10,20 @@
 </head>
 
 <body>
+    <video autoplay controls></video>
     <audio autoplay controls></audio>
     <button>Call</button>
+
     <script src="/plugins/jquery/jquery-3.6.0.min.js"></script>
+    <script src="/plugins/adapter/adapter-latest.js"></script>
     <script src="/plugins/bootstrap-5.2.2/js/bootstrap.bundle.min.js"></script>
     <script src="/socket.io/socket.io.min.js"></script>
     <script>
 
         var io = io('/rtc');
-        var peerConnection = new RTCPeerConnection({
-            "iceServers": [{
-                "urls": [
-                    "stun:stun1.l.google.com:19302",
-                    "stun:stun2.l.google.com:19302",
-                    "stun:stun.l.google.com:19302",
-                    "stun:stun3.l.google.com:19302",
-                    "stun:stun4.l.google.com:19302"
-                ]
-            }]
-        });
+        var peerConnection = new RTCPeerConnection();
 
-        var audio = $('audio');
+        var audio = $('video');
 
         io.on('connect', function (socket) {
 
@@ -56,7 +49,10 @@
 
             }
         };
-
+        // {
+        //     offerToReceiveAudio: 1,
+        //         offerToReceiveVideo: 1
+        // }
         $('button').click(function () {
 
             navigator.mediaDevices.getUserMedia({
@@ -70,10 +66,7 @@
 
                 peerConnection.addStream(localStream);
 
-                peerConnection.createOffer({
-                    offerToReceiveAudio: 1,
-                    offerToReceiveVideo: 0
-                }).then(function (desc) {
+                peerConnection.createOffer().then(function (desc) {
 
                     peerConnection.setLocalDescription(desc).then(function () {
 
@@ -84,7 +77,7 @@
 
 
             }).catch(err => {
-                alert(err);
+                alert('ini ' + err);
             })
         })
 
