@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+</head>
+
+<body>
+    <form>
+        <input type="password" name="key1" autocomplete="off" />
+        <input type="password" name="key2" autocomplete="off" />
+        <input type="password" name="key3" autocomplete="off" />
+        <button type="submit">Masuk</button>
+    </form>
+    <script src="/src/plugins/jquery/jquery-3.6.0.min.js"></script>
+    <script src="/socket.io/socket.io.min.js"></script>
+    <script>
+        var io = new io();
+
+        $(document).on('submit', function (e) {
+            e.preventDefault();
+
+            io.emit('user:req:login', {
+                satu: $('input[name="key1"]').val(),
+                dua: $('input[name="key2"]').val(),
+                tiga: $('input[name="key3"]').val()
+
+            }, function (r) {
+                window.location.reload();
+            })
+
+            return false;
+        })
+
+
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Risang</title>
+    <link rel="stylesheet" href="/src/plugins/bootstrap-5.2.2/css/bootstrap.min.css" />
+
+</head>
+
+<body>
+
+    <div class="container">
+        <h3 class="text-center my-4">Control Risang</h3>
+        <nav>
+            <div class="nav nav-tabs justify-content-center" id="nav-tab" role="tablist">
+                <button class="nav-link active" id="nav-home-tab" data-bs-toggle="tab" data-bs-target="#nav-project"
+                    type="button" role="tab">Project</button>
+                <button class="nav-link" id="nav-profile-tab" data-bs-toggle="tab" data-bs-target="#nav-ai"
+                    type="button" role="tab">AI</button>
+
+            </div>
+        </nav>
+        <div class="tab-content" id="nav-tabContent">
+            <div class="tab-pane fade show active p-2" id="nav-project" role="tabpanel" tabindex="0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4 class="my-3">List Project</h4>
+                    <button class="btn btn-primary"> Add </button>
+                </div>
+
+                <div>
+                    <table class="tabel-proj table table-sm table-striped">
+                        <thead>
+                            <tr>
+                                <th>NO</th>
+                                <th></th>
+                                <th>NAMA</th>
+                            </tr>
+                            <tr>
+                                <td style="width: 18px;"></td>
+                                <td style="width: 120px;"></td>
+                                <td>
+                                    <form>
+                                        <input name="nama" type="text" class="form-control form-control-sm" />
+                                    </form>
+                                </td>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+
+                </div>
+            </div>
+            <div class="tab-pane fade p-2" id="nav-ai" role="tabpanel" tabindex="0">
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="modalGambar" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+        aria-labelledby="staticBackdropLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title fs-5" id="staticBackdropLabel">Edit Gambar</h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div>
+                        <div class="input-group">
+                            <input type="text" class="form-control" />
+                            <button class="btn btn-outline-secondary" type="button">Button</button>
+                            <label class="btn btn-primary position-relative overflow-hidden">
+                                Cari
+                                <input type="file" class="position-absolute end-0" />
+                            </label>
+                        </div>
+
+                    </div>
+                    <div class="row">
+
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary">Understood</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/src/plugins/jquery/jquery-3.6.0.min.js"></script>
+    <script src="/src/plugins/popper/popper.min.js"></script>
+    <script src="/src/plugins/bootstrap-5.2.2/js/bootstrap.bundle.min.js"></script>
+    <script src="/socket.io/socket.io.min.js"></script>
+    <script>
+        (function () {
+
+            $.fn.getData = function () {
+
+                function update(data, keys, value) {
+                    if (keys.length === 0) {
+                        // Leaf node
+                        return value;
+                    }
+
+                    let key = keys.shift();
+                    if (!key) {
+                        data = data || [];
+                        if (Array.isArray(data)) {
+                            key = data.length;
+                        }
+                    }
+
+                    // Try converting key to a numeric value
+                    let index = +key;
+                    if (!isNaN(index)) {
+                        // We have a numeric index, make data a numeric array
+                        // This will not work if this is a associative array 
+                        // with numeric keys
+                        data = data || [];
+                        key = index;
+                    }
+
+                    // If none of the above matched, we have an associative array
+                    data = data || {};
+
+                    let val = update(data[key], keys, value);
+                    data[key] = val;
+
+                    return data;
+                }
+
+                function serializeForm(form) {
+                    return Array.from((new FormData(form)).entries()).reduce((data, [field, value]) => {
+                        //console.log(data, field, value);
+                        var [_, prefix, keys] = field.match(/^([^\[]+)((?:\[[^\]]*\])*)/);
+
+                        if (keys) {
+                            keys = Array.from(keys.matchAll(/\[([^\]]*)\]/g), m => m[1]);
+                            value = update(data[prefix], keys, value);
+                        }
+
+                        data[prefix] = value;
+                        return data;
+                    }, {});
+                }
+
+                var d = {};
+
+                this.each(function () {
+                    var form = this;
+
+                    var dt = new serializeForm(this);
+
+                    d = dt;
+                })
+
+                return d;
+            }
+        })()
+
+        var io = new io('/risang');
+
+        io.on('connect', function (err) {
+            getProject();
+        })
+
+        io.on('disconnect', function (err) {
+            console.log('disconect', err);
+        })
+
+        io.on('connect_error', function (err) {
+            console.log('gagal', err);
+        })
+
+        function getProject() {
+
+            io.emit('project:list', function (dt) {
+                var tr = [];
+                var tbl = $('.tabel-proj tbody');
+                console.log(dt);
+                $.each(dt, function (a, b) {
+                    var d = $(`<div class="dropdown">
+                                    <button class="btn btn-sm btn-light shadow-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        Edit
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><h6 class="dropdown-header">Edit ${b.nama}</h6></li>
+                                        <li><a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#modalGambar" href="#">Gambar</a></li>
+                                        <li><a class="dropdown-item" href="#">Deskripsi</a></li>
+                                        <li><a class="dropdown-item" href="#">Highlight</a></li>
+                                        <li><a class="dropdown-item" href="#">Kategori</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item text-danger" href="#">Delete</a></li>
+                                    </ul>
+                                </div>`);
+
+                    var e = $(`<tr>
+                                <td>${(a + 1)}</td>
+                                <td class="action"></td>
+                                <td>${b.nama}</td>
+                                </tr>`);
+
+                    e.children('.action').html(d[0]);
+
+                    tr.push(e[0]);
+                })
+
+                tbl.html(tr);
+            })
+
+        }
+
+
+        $('.tabel-proj form input').on('keydown', function (e) {
+            var frm = $(this).parents('form').eq(0);
+
+            if (e.keyCode == 13) {
+                e.preventDefault();
+
+                frm.data('action', 'project:add');
+
+                frm.on('submit-success', function (e, data, frm) {
+                    console.log(data);
+
+                    if (data.oke) {
+                        frm[0].reset();
+                        getProject();
+                    }
+
+                    if (data.message) {
+                        alert(data.message);
+                    }
+                });
+
+                frm.submit();
+
+            }
+        })
+
+        $(document).on('submit', function (e) {
+            e.preventDefault();
+
+            var frm = $(e.target);
+            var sub = frm.attr('action') || frm.data('action');
+            var dt = frm.getData();
+
+            io.emit(sub, dt, function (b) {
+
+                frm.trigger('submit-success', [b, frm])
+            });
+
+        })
+    </script>
+</body>
+
+</html>
