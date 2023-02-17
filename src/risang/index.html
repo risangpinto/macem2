@@ -7,6 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Risang</title>
     <link rel="stylesheet" href="/src/plugins/bootstrap-5.2.2/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/src/plugins/cropperjs/cropper.min.css" />
 
 </head>
 
@@ -73,14 +74,16 @@
                 <div class="modal-body">
                     <div>
                         <div class="input-group">
-                            <input type="text" class="form-control" />
+                            <input id="img" type="text" class="form-control" />
                             <button class="btn btn-outline-secondary" type="button">Button</button>
                             <label class="btn btn-primary position-relative overflow-hidden">
                                 Cari
                                 <input type="file" class="position-absolute end-0" />
                             </label>
                         </div>
-
+                        <div class="text-center">
+                            <img id="imgUpload" class="img-fluid">
+                        </div>
                     </div>
                     <div class="row">
 
@@ -98,6 +101,7 @@
     <script src="/src/plugins/popper/popper.min.js"></script>
     <script src="/src/plugins/bootstrap-5.2.2/js/bootstrap.bundle.min.js"></script>
     <script src="/socket.io/socket.io.min.js"></script>
+    <script src="/src/plugins/cropperjs/cropper.min.js"></script>
     <script>
         (function () {
 
@@ -166,6 +170,7 @@
         })()
 
         var io = new io('/risang');
+        var $cropper;
 
         io.on('connect', function (err) {
             getProject();
@@ -184,7 +189,7 @@
             io.emit('project:list', function (dt) {
                 var tr = [];
                 var tbl = $('.tabel-proj tbody');
-                console.log(dt);
+
                 $.each(dt, function (a, b) {
                     var d = $(`<div class="dropdown">
                                     <button class="btn btn-sm btn-light shadow-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -208,6 +213,7 @@
                                 </tr>`);
 
                     e.children('.action').html(d[0]);
+                    e.data('project', b);
 
                     tr.push(e[0]);
                 })
@@ -215,6 +221,23 @@
                 tbl.html(tr);
             })
 
+        }
+
+
+        function cropperImg(opt) {
+            var img = $('#imgUpload');
+
+            if ($cropper) {
+                $cropper.destroy();
+            }
+
+            img.on('dblclick', function (e) {
+                e
+            })
+
+            $cropper = new Cropper(img[0], {
+                aspectRatio: 1.33333333
+            });
         }
 
 
@@ -256,7 +279,73 @@
                 frm.trigger('submit-success', [b, frm])
             });
 
+        }).on('keydown', function (e) {
+            console.log(e.keyCode);
+
+            if (e.keyCode == 13 && $cropper) {
+                var canvas = $cropper.getCroppedCanvas();
+                var mdl = $('#modalGambar');
+                var s = mdl.data('src');
+                var dt = $(s).parents('tr').data('project');
+
+                console.log(dt);
+
+                canvas.toBlob(function (blob) {
+                    var d = {
+                        no: dt.noini,
+                        img: blob,
+                        kat: ''
+                    }
+
+                    io.emit('project:screen:add', d, function (r) {
+                        console.log(r);
+                    })
+
+                });
+            }
         })
+
+        $('#modalGambar').on('show.bs.modal', function (e) {
+
+            $('#modalGambar').data('src', e.relatedTarget)
+
+        })
+
+        $('input#img').on('paste', function (e) {
+            var elm = $(this);
+            var items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            var img = $('#imgUpload');
+
+            for (var i = 0; i < items.length; i++) {
+                console.log(items[i]);
+                if (items[i].type.indexOf('image') !== -1) {
+                    var blob = items[i].getAsFile();
+
+                    if (URL) {
+                        var url = URL.createObjectURL(blob);
+
+                        console.log('URL', url);
+                        img.attr('src', url);
+
+                        cropperImg();
+                    } else {
+                        var reader = new FileReader();
+
+                        reader.readAsDataURL(blob);
+
+                        reader.onloadend = function () {
+                            var base64data = reader.result;
+
+                            img.attr('src', base64data);
+                            cropperImg();
+
+                        }
+                    }
+
+                }
+
+            }
+        });
     </script>
 </body>
 

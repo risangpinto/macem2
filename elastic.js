@@ -1,13 +1,7 @@
-const { Client } = require('@elastic/elasticsearch')
-const client = new Client({
-    cloud: {
-        id: 'e91d8539cd12452a83151f476b50447c:dXMtY2VudHJhbDEuZ2NwLmNsb3VkLmVzLmlvOjQ0MyQwMWIxMWJlOTk1ZGQ0Zjg0OTExYTgxY2Q2ZGNjMTliYSRmZGYzMjlkNGZkZTA0YTFkOGZjOGY5YmM1MDVhMTdkMA=='
-    },
-    auth: {
-        username: 'elastic',
-        password: 'vOa7Ej29TYGO9nVHHkgagtgA'
-    }
-})
+const { Client } = require('@elastic/elasticsearch');
+const { elastic } = require('./config');
+
+const client = new Client(elastic);
 
 async function run() {
 

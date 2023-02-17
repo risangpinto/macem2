@@ -67,6 +67,21 @@ class Olah {
 
     }
 
+    async addScreen(dt) {
+
+        try {
+            var [res] = await this.db.execute(`INSERT INTO project_screen(noproject, \`file\`, kategori) 
+                                                VALUES (?, ?, ?)`, [dt.noproj, dt.file, dt.kategori]);
+
+            return { oke: true, insertId: res.insertId }
+        } catch (error) {
+            return { oke: false, message: error.message }
+
+        }
+
+    }
+
+
     async listProject() {
 
         try {
@@ -82,6 +97,24 @@ class Olah {
         }
 
     }
+
+
+    async listScreen() {
+
+        try {
+
+            var [r, f] = await this.db.query('SELECT * FROM project_data');
+
+            return r;
+
+        } catch (error) {
+
+            console.log(error.message);
+            return [];
+        }
+
+    }
+
 
 }
 
@@ -128,6 +161,20 @@ risang.on('connect', async (socket) => {
 
     socket.on('project:list', async (cb) => {
         var r = await olah.listProject();
+
+        cb(r);
+    })
+
+    socket.on('project:screen:add', async (dt, cb) => {
+        var d = {
+            noproj: dt.no,
+            file: dt.img,
+            kategori: dt.kat
+        }
+
+        console.log(d);
+
+        var r = await olah.addScreen(d);
 
         cb(r);
     })
